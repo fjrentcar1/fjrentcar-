@@ -1,0 +1,3 @@
+import {prisma} from "./prisma";
+export function makeBookingNo(d=new Date()){const s=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Jakarta",year:"numeric",month:"2-digit",day:"2-digit"}).format(d).replaceAll("-","");return `FJ-${s}-${Math.random().toString(36).slice(2,8).toUpperCase()}`;}
+export async function assertVehicleAvailable(vehicleId:string,start:Date,end:Date){if(end<=start)throw new Error("Waktu tidak valid.");const x=await prisma.booking.findFirst({where:{vehicleId,status:{in:["PENDING","CONFIRMED"]},pickupStart:{lt:end},pickupEnd:{gt:start}}});if(x)throw new Error("Mobil tidak tersedia pada waktu tersebut.");}
