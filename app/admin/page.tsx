@@ -19,10 +19,28 @@ interface Booking {
 }
 
 export default function AdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  // Passcode Admin Default: fjrentcar2026
+  const ADMIN_PIN = 'fjrentcar2026';
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pinInput === ADMIN_PIN) {
+      setIsAuthenticated(true);
+      setPinError('');
+    } else {
+      setPinError('Passcode/PIN Admin Salah. Akses ditolak.');
+    }
+  };
 
   const fetchBookings = async () => {
+    setLoading(true);
     try {
       const res = await fetch('/api/bookings');
       const data = await res.json();
@@ -37,8 +55,10 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    fetchBookings();
-  }, []);
+    if (isAuthenticated) {
+      fetchBookings();
+    }
+  }, [isAuthenticated]);
 
   const updateStatus = async (id: string, newStatus: Booking['status']) => {
     try {
@@ -58,7 +78,55 @@ export default function AdminPage() {
     }
   };
 
-  // Ringkasan Statistik Riil dari Database
+  // Tampilan Form Otentikasi Jika Belum Login
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl space-y-6">
+          <div className="text-center">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black text-2xl flex items-center justify-center mx-auto shadow-lg shadow-amber-500/20 mb-3">
+              FJ
+            </div>
+            <h1 className="text-xl font-bold text-white">Panel Operasional Admin</h1>
+            <p className="text-xs text-slate-400 mt-1">Masukkan Passcode Keamanan FJ Rentcar</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            {pinError && (
+              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3 rounded-xl text-xs text-center font-medium">
+                {pinError}
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Passcode Rahasia Admin</label>
+              <input
+                type="password"
+                required
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value)}
+                placeholder="Masukkan Passcode (default: fjrentcar2026)"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-amber-500"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs py-3 rounded-xl shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 transition"
+            >
+              Masuk ke Panel Admin →
+            </button>
+          </form>
+
+          <div className="text-center pt-2">
+            <Link href="/" className="text-xs text-slate-500 hover:text-slate-300 underline">
+              ← Kembali ke Website Utama
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Tampilan Panel Admin Utama Setelah Login Berhasil
   const totalIncome = bookings
     .filter((b) => b.status === 'SELESAI' || b.status === 'DISETUJUI')
     .reduce((sum, b) => sum + b.totalPrice, 0);
@@ -86,9 +154,12 @@ export default function AdminPage() {
             >
               🔄 Refresh Data
             </button>
-            <Link href="/" className="text-slate-400 hover:text-white transition">
-              Lihat Website Utama →
-            </Link>
+            <button
+              onClick={() => setIsAuthenticated(false)}
+              className="text-rose-400 hover:underline text-xs"
+            >
+              Keluar (Logout)
+            </button>
           </div>
         </div>
       </nav>
