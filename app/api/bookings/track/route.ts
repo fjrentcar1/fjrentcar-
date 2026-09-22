@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -7,7 +9,7 @@ export async function GET(request: Request) {
 
   if (!code) {
     return NextResponse.json(
-      { success: false, message: 'Kode booking wajib diisi' },
+      { success: false, message: 'Kode booking atau nomor HP wajib diisi.' },
       { status: 400 }
     );
   }
@@ -15,19 +17,22 @@ export async function GET(request: Request) {
   try {
     const booking = await prisma.booking.findFirst({
       where: {
-        bookingCode: {
-          equals: code.trim(),
-          mode: 'insensitive',
-        },
+        OR: [
+          { bookingCode: { equals: code.trim(), mode: 'insensitive' } },
+          { custPhone: { contains: code.trim() } },
+        ],
       },
       include: {
         car: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
 
     if (!booking) {
       return NextResponse.json(
-        { success: false, message: 'Kode booking tidak ditemukan' },
+        { success: false, message: 'Data pesanan tidak ditemukan. Periksa kembali kode booking Anda.' },
         { status: 404 }
       );
     }
@@ -35,7 +40,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, data: booking });
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: 'Terjadi kesalahan sistem saat melacak pesanan' },
+      { success: false, message: 'Terjadi kesalahan sistem saat melacak pesanan.' },
       { status: 500 }
     );
   }
