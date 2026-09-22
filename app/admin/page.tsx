@@ -26,7 +26,10 @@ export default function AdminPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Passcode Admin Default: fjrentcar2026
+  // Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+
   const ADMIN_PIN = 'fjrentcar2026';
 
   const handleLogin = (e: React.FormEvent) => {
@@ -78,7 +81,49 @@ export default function AdminPage() {
     }
   };
 
-  // Tampilan Form Otentikasi Jika Belum Login
+  // Fungsi Ekspor Laporan Keuangan ke CSV
+  const exportToCSV = () => {
+    if (bookings.length === 0) {
+      alert('Belum ada data transaksi untuk diekspor.');
+      return;
+    }
+
+    const headers = ['Kode Booking', 'Nama Pemesan', 'No WhatsApp', 'Armada', 'Layanan', 'Tgl Mulai', 'Tgl Selesai', 'Total Biaya (Rp)', 'Status'];
+    const rows = filteredBookings.map((b) => [
+      b.bookingCode,
+      `"${b.custName}"`,
+      `"${b.custPhone}"`,
+      `"${b.car?.name || '-'}"`,
+      `"${b.serviceType}"`,
+      new Date(b.startDate).toLocaleDateString('id-ID'),
+      new Date(b.endDate).toLocaleDateString('id-ID'),
+      b.totalPrice,
+      b.status,
+    ]);
+
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Laporan_Transaksi_FJ_Rentcar_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Filter Data Pesanan
+  const filteredBookings = bookings.filter((b) => {
+    const matchStatus = statusFilter === 'ALL' || b.status === statusFilter;
+    const matchSearch =
+      b.bookingCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.custName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.custPhone.includes(searchQuery);
+    return matchStatus && matchSearch;
+  });
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
@@ -126,7 +171,6 @@ export default function AdminPage() {
     );
   }
 
-  // Tampilan Panel Admin Utama Setelah Login Berhasil
   const totalIncome = bookings
     .filter((b) => b.status === 'SELESAI' || b.status === 'DISETUJUI')
     .reduce((sum, b) => sum + b.totalPrice, 0);
@@ -149,27 +193,35 @@ export default function AdminPage() {
 
           <div className="flex items-center gap-4 text-xs">
             <button
-              onClick={fetchBookings}
-              className="text-amber-400 hover:underline text-xs flex items-center gap-1"
+              onClick={exportToCSV}
+              className="bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
             >
-              🔄 Refresh Data
+              📥 Ekspor Laporan CSV
+            </button>
+            <button
+              onClick={fetchBookings}
+              className="text-amber-400 hover:underline text-xs"
+            >
+              🔄 Refresh
             </button>
             <button
               onClick={() => setIsAuthenticated(false)}
               className="text-rose-400 hover:underline text-xs"
             >
-              Keluar (Logout)
+              Logout
             </button>
           </div>
         </div>
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-black text-white">Kelola Operasional Rental</h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Data pesanan langsung terhubung secara real-time dari database PostgreSQL Railway.
-          </p>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white">Kelola Operasional Rental</h1>
+            <p className="text-xs sm:text-sm text-slate-400 mt-1">
+              Data pesanan langsung terhubung secara real-time dari database PostgreSQL Railway.
+            </p>
+          </div>
         </div>
 
         {/* Metrics Overview */}
@@ -194,20 +246,42 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Filter & Search Bar */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari Kode Booking / Nama Pemesan / HP..."
+            className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+          >
+            <option value="ALL">Semua Status</option>
+            <option value="DIPROSES">Status: DIPROSES</option>
+            <option value="DISETUJUI">Status: DISETUJUI</option>
+            <option value="SELESAI">Status: SELESAI</option>
+            <option value="DIBATALKAN">Status: DIBATALKAN</option>
+          </select>
+        </div>
+
         {/* Table Manajemen Pesanan */}
         <div className="rounded-2xl border border-slate-800 bg-slate-900/80 overflow-hidden shadow-2xl backdrop-blur-xl">
           <div className="p-5 border-b border-slate-800 flex items-center justify-between">
             <h2 className="text-sm font-bold uppercase tracking-wider text-amber-400">
               Daftar Reservasi PostgreSQL
             </h2>
-            <span className="text-xs text-slate-400">Total: {bookings.length} pesanan</span>
+            <span className="text-xs text-slate-400">Menampilkan {filteredBookings.length} dari {bookings.length} data</span>
           </div>
 
           <div className="overflow-x-auto">
             {loading ? (
               <div className="p-8 text-center text-xs text-slate-400">Memuat data pesanan...</div>
-            ) : bookings.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-400">Belum ada pesanan masuk di database.</div>
+            ) : filteredBookings.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">Tidak ada pesanan yang sesuai dengan filter.</div>
             ) : (
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-950/80 uppercase tracking-wider text-slate-400 border-b border-slate-800">
@@ -221,7 +295,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                  {bookings.map((b) => (
+                  {filteredBookings.map((b) => (
                     <tr key={b.id} className="hover:bg-slate-800/40 transition">
                       <td className="py-4 px-5">
                         <div className="font-mono text-amber-400 font-bold">{b.bookingCode}</div>
