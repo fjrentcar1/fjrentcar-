@@ -1,231 +1,207 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 interface Car {
   id: string;
+  slug: string;
   name: string;
-  category: 'mpv' | 'sedan' | 'suv';
-  categoryLabel: string;
-  price: string;
+  category: string;
+  pricePerDay: number;
   capacity: string;
   transmission: string;
   engine: string;
-  features: string[];
   image: string;
-  popular?: boolean;
+  popular: boolean;
 }
 
-const FLEET_DATA: Car[] = [
-  {
-    id: 'alphard-hev',
-    name: 'Toyota Alphard 2.5 HEV',
-    category: 'mpv',
-    categoryLabel: 'Luxury MPV',
-    price: 'Rp 3.500.000',
-    capacity: '7 Penumpang',
-    transmission: 'CVT Automatic',
-    engine: '2.5L Hybrid Electric',
-    features: ['Captain Seat VIP', 'Executive Power Seat', 'Panoramic Roof', 'Ambient Lighting', 'Wireless Charger'],
-    image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
-    popular: true,
-  },
-  {
-    id: 'lexus-lm350',
-    name: 'Lexus LM 350 Hybrid',
-    category: 'mpv',
-    categoryLabel: 'Ultra Luxury MPV',
-    price: 'Rp 6.500.000',
-    capacity: '4 - 7 Penumpang',
-    transmission: 'E-CVT',
-    engine: '2.5L HEV System',
-    features: ['Mark Levinson Audio', '48-inch Rear Screen', 'Privasi Partition Glass', 'Massage Seats', 'Cool Box'],
-    image: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80',
-    popular: true,
-  },
-  {
-    id: 'mercedes-sclass',
-    name: 'Mercedes-Benz S-Class S 450',
-    category: 'sedan',
-    categoryLabel: 'Executive Saloon',
-    price: 'Rp 7.000.000',
-    capacity: '5 Penumpang',
-    transmission: '9G-TRONIC Auto',
-    engine: '3.0L Inline-6 Turbo',
-    features: ['Burmester 3D Surround', 'AIRMATIC Suspension', 'Rear Seat Entertainment', 'Soft Close Doors'],
-    image: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=800&q=80',
-    popular: true,
-  },
-  {
-    id: 'land-cruiser-300',
-    name: 'Toyota Land Cruiser 300 VX-R',
-    category: 'suv',
-    categoryLabel: 'Luxury SUV',
-    price: 'Rp 5.500.000',
-    capacity: '7 Penumpang',
-    transmission: '10-Speed Automatic',
-    engine: '3.3L Twin Turbo Diesel',
-    features: ['4WD Terrain Select', 'JBL Premium Sound', 'Power Tailgate', 'Heated & Ventilated Seats'],
-    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'bmw-7series',
-    name: 'BMW 740i Opulence',
-    category: 'sedan',
-    categoryLabel: 'Luxury Saloon',
-    price: 'Rp 6.800.000',
-    capacity: '5 Penumpang',
-    transmission: '8-Speed Steptronic',
-    engine: '3.0L BMW TwinPower Turbo',
-    features: ['BMW Theatre Screen 31"', 'Bowers & Wilkins Sound', 'Executive Lounge Seating', 'Sky Lounge Glass Roof'],
-    image: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80',
-  },
-];
-
 export default function CarsPage() {
-  const [filter, setFilter] = useState<'all' | 'mpv' | 'sedan' | 'suv'>('all');
+  const [cars, setCars] = useState<Car[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredCars = filter === 'all' 
-    ? FLEET_DATA 
-    : FLEET_DATA.filter(car => car.category === filter);
+  useEffect(() => {
+    fetch('/api/cars')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setCars(data.data);
+        }
+      })
+      .catch((err) => console.error('Gagal memuat armada:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filteredCars = cars.filter((car) => {
+    const matchCategory =
+      selectedCategory === 'all' || car.category.toLowerCase() === selectedCategory.toLowerCase();
+    const matchSearch = car.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCategory && matchSearch;
+  });
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500 selection:text-slate-950">
-      {/* Navbar Minimalis */}
-      <nav className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      {/* Top Navbar */}
+      <nav className="border-b border-slate-800 bg-slate-900/80 sticky top-0 z-50 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black text-xl flex items-center justify-center shadow-lg shadow-amber-500/20">
               FJ
             </div>
-            <div>
-              <span className="font-extrabold tracking-wider text-white text-lg block leading-none">FJ RENTCAR</span>
-              <span className="text-[10px] text-amber-400 font-medium tracking-widest uppercase">Luxury Mobility</span>
-            </div>
+            <span className="font-extrabold tracking-wider text-white text-lg">FJ RENTCAR</span>
           </Link>
 
-          <div className="flex items-center gap-6 text-xs font-semibold uppercase tracking-wider text-slate-300">
-            <Link href="/" className="hover:text-amber-400 transition">Beranda</Link>
-            <Link href="/cars" className="text-amber-400">Katalog Armada</Link>
-            <Link href="/booking" className="hover:text-amber-400 transition">Pemesanan</Link>
+          <div className="flex items-center gap-4 text-xs font-semibold">
+            <Link href="/tracking" className="text-slate-300 hover:text-amber-400 transition">
+              Lacak Pesanan
+            </Link>
+            <Link
+              href="/booking"
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded-xl transition shadow-md shadow-amber-500/20"
+            >
+              Sewa Sekarang
+            </Link>
           </div>
         </div>
       </nav>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <span className="text-xs font-semibold tracking-widest uppercase text-amber-400 bg-amber-500/10 px-4 py-1.5 rounded-full border border-amber-500/20">
-            Pilihan Premium Fleet
+      {/* Main Container */}
+      <main className="max-w-7xl mx-auto px-4 py-12">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <span className="text-xs uppercase font-bold text-amber-400 tracking-widest border border-amber-500/20 bg-amber-500/10 px-3.5 py-1.5 rounded-full">
+            Katalog Armada Eksklusif
           </span>
-          <h1 className="mt-4 text-3xl sm:text-5xl font-black tracking-tight text-white">
-            Katalog Armada FJ Rentcar
-          </h1>
-          <p className="mt-3 text-sm sm:text-base text-slate-400">
-            Setiap unit senantiasa terjaga dalam kondisi prima, bersih, beraroma harum, serta siap memberikan kenyamanan tingkat tinggi bagi perjalanan Anda.
+          <h1 className="text-3xl sm:text-5xl font-black text-white mt-4">Pilihan Mobil Mewah VIP</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-2">
+            Seluruh armada dalam kondisi prima, wangi, dan terawat resmi. Siap melayani kebutuhan perjalanan dinas, kenegaraan, hingga acara pribadi Anda.
           </p>
         </div>
 
-        {/* Filter Buttons */}
-        <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-10">
-          {[
-            { id: 'all', label: 'Semua Armada' },
-            { id: 'mpv', label: 'MPV Mewah' },
-            { id: 'sedan', label: 'Sedan Eksekutif' },
-            { id: 'suv', label: 'SUV Luxury' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setFilter(tab.id as any)}
-              className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition tracking-wide ${
-                filter === tab.id
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold shadow-lg shadow-amber-500/20'
-                  : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Filter Controls & Search */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-10 bg-slate-900/60 p-4 rounded-2xl border border-slate-800 backdrop-blur-xl">
+          {/* Category Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
+            {[
+              { id: 'all', label: 'Semua Unit' },
+              { id: 'mpv', label: 'Luxury MPV' },
+              { id: 'sedan', label: 'Flagship Sedan' },
+              { id: 'suv', label: 'Premium SUV' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setSelectedCategory(tab.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                  selectedCategory === tab.id
+                    ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
+                    : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search Input */}
+          <div className="w-full sm:w-72">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari armada (misal: Alphard)..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 placeholder:text-slate-500"
+            />
+          </div>
         </div>
 
         {/* Fleet Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredCars.map((car) => (
-            <div
-              key={car.id}
-              className="rounded-2xl border border-slate-800 bg-slate-900/80 overflow-hidden shadow-2xl flex flex-col justify-between backdrop-blur-xl group hover:border-amber-500/40 transition duration-300"
-            >
-              <div>
-                <div className="relative h-56 overflow-hidden bg-slate-950">
-                  <img
-                    src={car.image}
-                    alt={car.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                  />
-                  <div className="absolute top-4 left-4 flex gap-2">
-                    <span className="text-[10px] uppercase font-bold text-amber-400 bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-md border border-amber-500/30">
-                      {car.categoryLabel}
+        {loading ? (
+          <div className="text-center py-20 text-xs text-slate-400">
+            Memuat daftar armada dari database PostgreSQL...
+          </div>
+        ) : filteredCars.length === 0 ? (
+          <div className="text-center py-20 text-xs text-slate-400 bg-slate-900/40 rounded-3xl border border-slate-800">
+            Tidak ada armada yang sesuai dengan kriteria pencarian Anda.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredCars.map((car) => (
+              <div
+                key={car.id}
+                className="group rounded-3xl border border-slate-800 bg-slate-900/80 overflow-hidden shadow-2xl hover:border-amber-500/50 transition-all duration-300 flex flex-col justify-between"
+              >
+                <div>
+                  {/* Image Header */}
+                  <div className="relative h-56 overflow-hidden">
+                    <img
+                      src={car.image}
+                      alt={car.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
+                    <span className="absolute top-4 left-4 bg-slate-950/80 backdrop-blur-md border border-slate-800 text-amber-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                      {car.category}
                     </span>
                     {car.popular && (
-                      <span className="text-[10px] uppercase font-bold text-slate-950 bg-amber-400 px-3 py-1 rounded-md shadow">
-                        Terpopuler
+                      <span className="absolute top-4 right-4 bg-amber-500 text-slate-950 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-md">
+                        Terfavorit
                       </span>
                     )}
                   </div>
-                </div>
 
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-white group-hover:text-amber-400 transition">
-                    {car.name}
-                  </h3>
-                  
-                  {/* Specs summary */}
-                  <div className="grid grid-cols-2 gap-2 mt-4 text-xs text-slate-400 border-y border-slate-800/80 py-3">
-                    <div>👥 {car.capacity}</div>
-                    <div>⚙️ {car.transmission}</div>
-                    <div className="col-span-2">⛽ Engine: {car.engine}</div>
-                  </div>
+                  {/* Body Info */}
+                  <div className="p-6 space-y-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition">
+                        {car.name}
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-1">{car.engine}</p>
+                    </div>
 
-                  {/* Features list */}
-                  <div className="mt-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-2">
-                      Fitur Unggulan
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {car.features.map((ft, i) => (
-                        <span key={i} className="text-[10px] bg-slate-800/80 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700/50">
-                          ✓ {ft}
+                    <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-slate-300">
+                      <div>
+                        <span className="text-slate-500 block">Kapasitas:</span>
+                        <span className="font-semibold text-white">{car.capacity}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Transmisi:</span>
+                        <span className="font-semibold text-white">{car.transmission}</span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-800/80 pt-3 flex items-baseline justify-between">
+                      <span className="text-xs text-slate-400">Mulai dari</span>
+                      <div className="text-right">
+                        <span className="text-lg font-black text-amber-400">
+                          Rp {car.pricePerDay.toLocaleString('id-ID')}
                         </span>
-                      ))}
+                        <span className="text-[10px] text-slate-400"> / hari</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Price & Action */}
-              <div className="p-6 pt-0 border-t border-slate-800/40 mt-4 flex items-center justify-between gap-4">
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Tarif Sewa / Hari</span>
-                  <span className="text-lg font-black text-amber-400">{car.price}</span>
+                {/* Card Action Buttons */}
+                <div className="p-6 pt-0 grid grid-cols-2 gap-2">
+                  <Link
+                    href={`/cars/${car.slug}`}
+                    className="text-center bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 font-semibold text-xs py-2.5 rounded-xl transition"
+                  >
+                    Detail Unit
+                  </Link>
+                  <Link
+                    href={`/booking?car=${encodeURIComponent(car.name)}`}
+                    className="text-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs py-2.5 rounded-xl shadow-lg shadow-amber-500/20 transition"
+                  >
+                    Pesan Sewa
+                  </Link>
                 </div>
-                <Link
-                  href={`/booking`}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 transition"
-                >
-                  Pesan Sewa
-                </Link>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </main>
-
-      {/* Footer Minimalis */}
-      <footer className="border-t border-slate-800 py-8 text-center text-xs text-slate-500 mt-16">
-        © {new Date().getFullYear()} FJ Rentcar — Layanan Rental Mobil Mewah Terpercaya.
-      </footer>
     </div>
   );
 }
