@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  BOOKED
+  MAINTENANCE
+}
+
+enum DocumentType {
+  INVOICE
+  QUOTATION
+}
+
+model User {
+  id           String   @id
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  role         Role     @default(CUSTOMER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  bookings Booking[]
+}
+
+model Vehicle {
+  id           String        @id
+  name         String
+  category     String
+  price4h      Int?
+  price12h     Int
+  price24h     Int?
+  seats        Int
+  transmission String?
+  plateNumber  String?
+  imageUrl     String?
+  status       VehicleStatus @default(AVAILABLE)
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  bookings Booking[]
+}
+
+model Booking {
+  id             String        @id
+  bookingNo      String        @unique
+  userId         String
+  vehicleId      String
+  mode           String        @default("DRIVER")
+  status         BookingStatus @default(PENDING)
+  paymentStatus  PaymentStatus @default(UNPAID)
+  pickupLocation String
+  pickupStart    DateTime
+  pickupEnd      DateTime
+  passengerCount Int           @default(1)
+  notes          String?
+  subtotal       Int
+  extraFee       Int           @default(0)
+  total          Int
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  vehicle   Vehicle    @relation(fields: [vehicleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  payments  Payment[]
+  documents Document[]
+
+  @@index([vehicleId, pickupStart, pickupEnd])
+  @@index([userId, createdAt])
+}
+
+model Payment {
+  id                String   @id
+  bookingId         String
+  orderId           String   @unique
+  transactionId     String?
+  paymentType       String?
+  transactionStatus String   @default("pending")
+  fraudStatus       String?
+  grossAmount       Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+}
+
+model Document {
+  id        String       @id
+  type      DocumentType
+  number    String       @unique
+  bookingId String
+  createdAt DateTime     @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+}
