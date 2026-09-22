@@ -1,19 +1,15 @@
 import { MetadataRoute } from 'next';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://secure-bravery-production-cd46.up.railway.app';
+  const baseUrl = 'https://fjrentcar.com';
 
-  // Daftar static routes
-  const routes = [
-    '',
-    '/cars',
-    '/booking',
-  ].map((route) => ({
+  // Static Routes
+  const routes = ['', '/cars', '/booking', '/tracking'].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
     changeFrequency: 'daily' as const,
-    priority: route === '' ? 1.0 : 0.8,
+    priority: route === '' ? 1 : 0.8,
   }));
 
-  return routes;
+  return [...routes];
 }
