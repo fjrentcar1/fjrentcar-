@@ -26,7 +26,6 @@ export default function AdminPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
@@ -81,7 +80,6 @@ export default function AdminPage() {
     }
   };
 
-  // Fungsi Ekspor Laporan Keuangan ke CSV
   const exportToCSV = () => {
     if (bookings.length === 0) {
       alert('Belum ada data transaksi untuk diekspor.');
@@ -114,7 +112,24 @@ export default function AdminPage() {
     document.body.removeChild(link);
   };
 
-  // Filter Data Pesanan
+  // Generator Pesan WhatsApp Otomatis
+  const generateWAMessage = (b: Booking) => {
+    const formattedPhone = b.custPhone.replace(/[^0-9]/g, '').replace(/^0/, '62');
+    const text = `Halo Bapak/Ibu *${b.custName}*,\n\nTerima kasih telah memesan layanan VIP di *FJ RENTCAR*.\n\n` +
+      `📌 *Detail Pesanan Anda:*\n` +
+      `• Kode Booking: *${b.bookingCode}*\n` +
+      `• Armada: *${b.car?.name || 'Unit VIP'}*\n` +
+      `• Layanan: ${b.serviceType}\n` +
+      `• Periode: ${new Date(b.startDate).toLocaleDateString('id-ID')} - ${new Date(b.endDate).toLocaleDateString('id-ID')}\n` +
+      `• Total Biaya: Rp ${b.totalPrice.toLocaleString('id-ID')}\n` +
+      `• Status Pesanan: *${b.status}*\n\n` +
+      `Anda dapat mengecek status pesanan kapan saja melalui tautan:\n` +
+      `https://fjrentcar.com/tracking\n\n` +
+      `Tim operasional kami akan segera menghubungi Anda untuk koordinasi pengemudi. Salam, *FJ RENTCAR*.`;
+
+    return `https://wa.me/${formattedPhone}?text=${encodeURIComponent(text)}`;
+  };
+
   const filteredBookings = bookings.filter((b) => {
     const matchStatus = statusFilter === 'ALL' || b.status === statusFilter;
     const matchSearch =
@@ -196,18 +211,12 @@ export default function AdminPage() {
               onClick={exportToCSV}
               className="bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
             >
-              📥 Ekspor Laporan CSV
+              📥 Ekspor CSV
             </button>
-            <button
-              onClick={fetchBookings}
-              className="text-amber-400 hover:underline text-xs"
-            >
+            <button onClick={fetchBookings} className="text-amber-400 hover:underline text-xs">
               🔄 Refresh
             </button>
-            <button
-              onClick={() => setIsAuthenticated(false)}
-              className="text-rose-400 hover:underline text-xs"
-            >
+            <button onClick={() => setIsAuthenticated(false)} className="text-rose-400 hover:underline text-xs">
               Logout
             </button>
           </div>
@@ -215,16 +224,14 @@ export default function AdminPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white">Kelola Operasional Rental</h1>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Data pesanan langsung terhubung secara real-time dari database PostgreSQL Railway.
-            </p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-2xl sm:text-3xl font-black text-white">Kelola Operasional Rental</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            Data pesanan langsung terhubung secara real-time dari database PostgreSQL Railway.
+          </p>
         </div>
 
-        {/* Metrics Overview */}
+        {/* Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5">
             <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Total Pendapatan Terkonfirmasi</span>
@@ -246,7 +253,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Filter & Search Bar */}
+        {/* Filter Bar */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
           <input
             type="text"
@@ -268,7 +275,7 @@ export default function AdminPage() {
           </select>
         </div>
 
-        {/* Table Manajemen Pesanan */}
+        {/* Table */}
         <div className="rounded-2xl border border-slate-800 bg-slate-900/80 overflow-hidden shadow-2xl backdrop-blur-xl">
           <div className="p-5 border-b border-slate-800 flex items-center justify-between">
             <h2 className="text-sm font-bold uppercase tracking-wider text-amber-400">
@@ -281,7 +288,7 @@ export default function AdminPage() {
             {loading ? (
               <div className="p-8 text-center text-xs text-slate-400">Memuat data pesanan...</div>
             ) : filteredBookings.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-400">Tidak ada pesanan yang sesuai dengan filter.</div>
+              <div className="p-8 text-center text-xs text-slate-400">Tidak ada pesanan yang sesuai.</div>
             ) : (
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-950/80 uppercase tracking-wider text-slate-400 border-b border-slate-800">
@@ -291,7 +298,7 @@ export default function AdminPage() {
                     <th className="py-3.5 px-5">Jadwal Sewa</th>
                     <th className="py-3.5 px-5">Total Biaya</th>
                     <th className="py-3.5 px-5">Status</th>
-                    <th className="py-3.5 px-5 text-right">Aksi Manajemen</th>
+                    <th className="py-3.5 px-5 text-right">Aksi & Notifikasi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -329,6 +336,15 @@ export default function AdminPage() {
                         </span>
                       </td>
                       <td className="py-4 px-5 text-right space-x-1">
+                        <a
+                          href={generateWAMessage(b)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-block px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 text-[11px] font-semibold transition mr-1"
+                        >
+                          💬 Kirim WA
+                        </a>
+
                         {b.status === 'DIPROSES' && (
                           <button
                             onClick={() => updateStatus(b.id, 'DISETUJUI')}
@@ -342,7 +358,7 @@ export default function AdminPage() {
                             onClick={() => updateStatus(b.id, 'SELESAI')}
                             className="px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30 text-[11px] font-semibold transition"
                           >
-                            Tandai Selesai
+                            Selesai
                           </button>
                         )}
                         {b.status !== 'DIBATALKAN' && b.status !== 'SELESAI' && (
